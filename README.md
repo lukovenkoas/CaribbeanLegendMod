@@ -2,9 +2,16 @@
 
 ![CL Toolkit](poster.jpg)
 
-**EN** — A cheat / sandbox toolkit for **Caribbean Legend 1.9.0** (Storm Engine). Press **Insert** to open
-the window (the game pauses). Interface language: Russian.
-**RU** — Чит-тулкит / песочница для **Caribbean Legend 1.9.0**. Окно — клавиша **Insert** (игра на паузе).
+> **Press INSERT to open the mod window. / Окно мода открывается клавишей INSERT.**
+
+> **Ship coordinates at sea:** the normal sea (tactical) mode now shows ship coordinates, like the world map
+> (same instruments: sextant / compass / chronometer; can be turned off in "Modes").
+> **Координаты в море:** в обычном морском (тактическом) режиме теперь показываются координаты корабля, как на
+> глобальной карте (по тем же приборам; отключается в «Режимах»).
+
+**EN** — A cheat / sandbox toolkit for **Caribbean Legend 1.9.0** (Storm Engine). The game pauses while the
+window is open. Interface language: Russian.
+**RU** — Чит-тулкит / песочница для **Caribbean Legend 1.9.0**. Пока окно открыто, игра на паузе.
 Язык интерфейса — русский.
 
 "1.9" in the name is the game version the mod is made for. / «1.9» в названии — версия игры, а не мода.
@@ -20,10 +27,10 @@ the window (the game pauses). Interface language: Russian.
 | Items: all items by category, search, give any quantity | Предметы: все предметы по категориям, поиск, выдача |
 | Ship: **class (rank)** for quest requirements, stats, hidden handling coefficients, crew, cannons, repair, specialization, trait | Корабль: **класс (ранг)** под требования квестов, характеристики, скрытые коэффициенты управления, команда, орудия, ремонт, специализация, свойство |
 | Cargo: all 50 goods | Трюм: все 50 товаров |
-| Modes: game cheat flags, damage multiplier, world-map speed, port storage limit, leave battle keeping the fleet, Steam achievement unlock | Режимы: штатные чит-флаги, множитель урона, скорость на карте, лимит стоянки в порту, выход из боя с флотом, открытие достижения Steam |
+| Modes: game cheat flags, damage multiplier, world-map speed, sea teleport ("Sail To" from any distance), atlas teleport (atlas M → right-click), port storage limit, leave battle keeping the fleet, Steam achievement unlock | Режимы: штатные чит-флаги, множитель урона, скорость на карте, морской телепорт («Доплыть» с любой дистанции), телепорт по атласу (атлас M → ПКМ), лимит стоянки в порту, выход из боя с флотом, открытие достижения Steam |
 | World: relations, location, date/time, encounters, special fleets finder with map | Мир: отношения, где мы, дата/время, встречи, поиск особых флотов со схемой |
 | Inspector: read-only attribute tree | Инспектор: дерево атрибутов (чтение) |
-| Squadron up to 8 ships; ship coordinates on the sea HUD | Эскадра до 8 кораблей; координаты корабля на экране моря |
+| Squadron up to 8 ships | Эскадра до 8 кораблей |
 
 ## Install / Установка
 
@@ -41,7 +48,7 @@ the window (the game pauses). Interface language: Russian.
 - Overrides game files / Заменяет файлы игры:
   `Loc_ai\LAi_character.c`, `Loc_ai\fightparams\common.c`, `characters\RPG\weight.c`,
   `characters\RPG\perks\perks.c`, `characters\characters.h`, `sea_ai\AICannon.c`, `scripts\companions.c`,
-  `battle_interface\BattleInterface.c`. Mods replacing the same files are not compatible.
+  `battle_interface\BattleInterface.c`, `interface\mapview.c`. Mods replacing the same files are not compatible.
   / Моды, заменяющие те же файлы, несовместимы.
 - Before removing the mod, reduce the squadron to 5 ships. / Перед удалением сократите эскадру до 5 кораблей.
 

@@ -297,6 +297,7 @@ string CLT_Misc_Flag(int i)
 		case 9: return "Cheats.ImmediateDeath"; break;	// BattleInterface.c:1163
 		case 10: return "CLToolkit.SeaCoordsOff"; break;	// инверт: атрибут есть = показ ВЫКЛ; по умолчанию показ включён.
 		case 11: return "CLToolkit.LeaveBattleKeepFleet"; break;	// выход из боя без бросания компаньонов (если игрок вышел)
+		case 12: return "Navigator.MapTP"; break;		// телепорт по атласу: читает наш interface\mapview.c («Навигатор» 1.9, Nav_CmdTowns)
 															// Читает CLT_SeaCoordsUpdate в нашем battle_interface\BattleInterface.c (оверлей)
 	}
 	return "";
@@ -307,7 +308,7 @@ string CLT_Misc_Desc(int i)
 	switch (i)
 	{
 		case 0: return "Аркадное плавание (без учёта ветра)"; break;
-		case 1: return "Морской телепорт / выход на карту"; break;
+		case 1: return "Морской телепорт («Доплыть»)"; break;
 		case 2: return "Быстрые переходы во враждебных городах"; break;
 		case 3: return "+1000 к переносимому весу"; break;
 		case 4: return "Без штрафа за класс корабля"; break;
@@ -318,6 +319,7 @@ string CLT_Misc_Desc(int i)
 		case 9: return "Мгновенная смерть врагов (море)"; break;
 		case 10: return "Координаты корабля в море"; break;
 		case 11: return "Выход из боя, сохраняя флот"; break;
+		case 12: return "Телепорт по атласу"; break;
 	}
 	return "";
 }
@@ -348,6 +350,13 @@ void CLT_Misc_Toggle(int i)
 	{
 		CT_UpdateCashTables(pchar);
 		CheckAndSetOverloadMode(pchar);
+	}
+	// Флаг 12 (телепорт по атласу): как «Навигатор» 1.9 (nav_commands.c Nav_CmdTowns) — без карты региона
+	// атлас пуст, поэтому при включении выдаём map_best и обновляем атлас
+	if (i == 12 && CheckAttribute(pchar, f) && !CheckCharacterItem(pchar, "map_best"))
+	{
+		TakeNItems(pchar, "map_best", 1);
+		RefreshEquippedMaps(pchar);
 	}
 	// Флаг 10 инвертный (SeaCoordsOff): галочка «показывать» = атрибута нет
 	if (i == 10) CLT_Log(CLT_Misc_Desc(i) + ": " + CLT_OnOff(!CheckAttribute(pchar, f)));
@@ -450,7 +459,15 @@ void CLT_Misc_Build()
 {
 	int i;
 	CLT_GCol(0, "Море и мир");
-	for (i = 0; i < 5; i++) CLT_GT("flag" + i, CLT_Misc_Desc(i), CheckAttribute(pchar, CLT_Misc_Flag(i)), true);
+	CLT_GT("flag0", CLT_Misc_Desc(0), CheckAttribute(pchar, CLT_Misc_Flag(0)), true);
+	// Два телепорта рядом: морской (флаг 1) — в пределах текущей морской локации, атлас (флаг 12) — по всему архипелагу
+	CLT_GT("flag1", CLT_Misc_Desc(1), CheckAttribute(pchar, CLT_Misc_Flag(1)), true);
+	CLT_GH("В море: «Доплыть» в порт, бухту, форт,");
+	CLT_GH("к кораблю — с любой дистанции, и в бою.");
+	CLT_GT("flag12", CLT_Misc_Desc(12), CheckAttribute(pchar, CLT_Misc_Flag(12)), true);
+	CLT_GH("Атлас (M), карта региона: ПКМ по карте —");
+	CLT_GH("список локаций, щелчок — перенос.");
+	for (i = 2; i < 5; i++) CLT_GT("flag" + i, CLT_Misc_Desc(i), CheckAttribute(pchar, CLT_Misc_Flag(i)), true);
 	CLT_GS("mapspd", "Скорость на карте", "x" + CLT_Misc_MapSpd(), true);
 	CLT_GH("Свой корабль на глобальной карте: 1, 2, 3.");
 	CLT_GCol(1, "");	// заголовок не рисуем: сверху в этой зоне поле фильтра ачивок (CLT_EDIT)
