@@ -1,0 +1,3 @@
+# keep game files byte-exact (UTF-8, CRLF)
+CLToolkit/** -text
+*.jpg binary

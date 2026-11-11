@@ -1,0 +1,4 @@
+CL Toolkit: empty placeholder, no migrations here.
+Saves made with the "Navigator 1.9" mod record its migration; without this folder the game
+warns "uninstalled mods: Navigator" on every load (migrations.c CheckForUninstalledMods).
+CL Toolkit replaces Navigator 1.9 and keeps its pchar.Navigator.* flags, so the warning is not needed.
