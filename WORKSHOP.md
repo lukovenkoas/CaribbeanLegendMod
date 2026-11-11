@@ -87,4 +87,10 @@ A cheat / sandbox toolkit for Caribbean Legend 1.9.0. [i]Interface language: Rus
 [hr][/hr]
 Distributed under the terms of the [url=https://github.com/Blackmark-Studio/Caribbean-Legend/blob/main/LICENSE.md]Storm Engine EULA[/url]. / Распространяется на условиях Storm Engine EULA.
 Source / Исходники: https://github.com/lukovenkoas/CaribbeanLegendMod
+
+[b]Интерактивная карта игры[/b]
+
+Если вам нужна интерактивная карта для игры, то вот моя разработка, которой пользуюсь сам, с учетом всего что было нужно.
+[url=https://github.com/lukovenkoas/CaribbeanLegendMap]https://github.com/lukovenkoas/CaribbeanLegendMap[/url]
+[img]map.jpg[/img]
 ```
