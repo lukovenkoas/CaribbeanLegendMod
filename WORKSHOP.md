@@ -4,6 +4,7 @@
 
 | Поле | Значение |
 |---|---|
+| Workshop ID | **3837821686** — https://steamcommunity.com/sharedfiles/filedetails/?id=3837821686 (опубликован 2026-11-11, Public). Обновления — в этот же мод, не создавать новый |
 | Title | `CL Toolkit 1.9` |
 | Contents folder | `D:\Progs\CaribbeanLegendMod\CLToolkit` (только эта папка: внутри `Program` и `Resource`) |
 | Preview image | `poster.jpg` (1024×1024, ≈0,5 МБ; лимит Steam 1 МБ) |

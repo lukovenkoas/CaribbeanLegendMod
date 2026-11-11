@@ -1,5 +1,7 @@
 # CL Toolkit 1.9
 
+[Steam Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3837821686)
+
 ![CL Toolkit](poster.jpg)
 
 > **Press INSERT to open the mod window. / Окно мода открывается клавишей INSERT.**
@@ -34,7 +36,7 @@ window is open. Interface language: Russian.
 
 ## Install / Установка
 
-- **Steam Workshop** — subscribe. / Подписаться в Мастерской.
+- **Steam Workshop** — subscribe: https://steamcommunity.com/sharedfiles/filedetails/?id=3837821686 / Подписаться в Мастерской.
 - **Manually / Вручную** — copy the `CLToolkit` folder into the game folder as `mod_cltoolkit` and add a line
   `mod_cltoolkit` to `overlays.txt` in the game folder; `engine.ini` must have `mod_safe_mode = 0`.
   / Скопировать папку `CLToolkit` в папку игры под именем `mod_cltoolkit` и добавить строку `mod_cltoolkit`
