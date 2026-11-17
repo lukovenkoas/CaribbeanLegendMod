@@ -588,19 +588,34 @@ void ApplyShipDynamicSpeedEffects(ref refCharacter)
 	if (CheckOfficersPerk(refCharacter, "WindCatcher")) mtp += PERK_VALUE_WIND_CATCHER;
 	if (IsMainCharacter(refCharacter)) mtp += SZN_GetModifierMtp(M_SHIP_SPEED_DYNAMIC, 0.0);
 
-	// CL Toolkit: базовую инерцию берём из экземпляра (RealShips), чтобы правки мода
-	// сохранялись между входами в море; перки (WindCatcher и др.) по-прежнему умножают.
-	float cltBaseAccelX = CheckAttribute(refRealShip, "InertiaAccelerationX") ? stf(refRealShip.InertiaAccelerationX) : stf(refBaseShip.InertiaAccelerationX);
-	float cltBaseAccelY = CheckAttribute(refRealShip, "InertiaAccelerationY") ? stf(refRealShip.InertiaAccelerationY) : stf(refBaseShip.InertiaAccelerationY);
-	float cltBaseAccelZ = CheckAttribute(refRealShip, "InertiaAccelerationZ") ? stf(refRealShip.InertiaAccelerationZ) : stf(refBaseShip.InertiaAccelerationZ);
+	// CL Toolkit: базовую инерцию берём из сохранённой базы (InertiaAcceleration*_Base),
+	// иначе из текущего значения экземпляра, чтобы правки мода сохранялись между входами
+	// в море; перки (WindCatcher и др.) по-прежнему умножают. База уже учитывает
+	// iArcadeSails (деление на 2 при создании корабля), поэтому здесь деление НЕ повторяем —
+	// иначе значения накапливаются при каждом входе в море (баг: инерция 180+).
+	float cltBaseAccelX = stf(refBaseShip.InertiaAccelerationX);
+	if (CheckAttribute(refRealShip, "InertiaAccelerationX_Base")) cltBaseAccelX = stf(refRealShip.InertiaAccelerationX_Base);
+	else if (CheckAttribute(refRealShip, "InertiaAccelerationX")) cltBaseAccelX = stf(refRealShip.InertiaAccelerationX);
+	float cltBaseAccelY = stf(refBaseShip.InertiaAccelerationY);
+	if (CheckAttribute(refRealShip, "InertiaAccelerationY_Base")) cltBaseAccelY = stf(refRealShip.InertiaAccelerationY_Base);
+	else if (CheckAttribute(refRealShip, "InertiaAccelerationY")) cltBaseAccelY = stf(refRealShip.InertiaAccelerationY);
+	float cltBaseAccelZ = stf(refBaseShip.InertiaAccelerationZ);
+	if (CheckAttribute(refRealShip, "InertiaAccelerationZ_Base")) cltBaseAccelZ = stf(refRealShip.InertiaAccelerationZ_Base);
+	else if (CheckAttribute(refRealShip, "InertiaAccelerationZ")) cltBaseAccelZ = stf(refRealShip.InertiaAccelerationZ);
+
+	// автосброс аномальных значений (накопление от старого бага): X/Z > 10 или Y > 10
+	if (cltBaseAccelX > 10.0 || cltBaseAccelX < 0.01) cltBaseAccelX = stf(refBaseShip.InertiaAccelerationX);
+	if (cltBaseAccelY > 10.0 || cltBaseAccelY < 0.01) cltBaseAccelY = stf(refBaseShip.InertiaAccelerationY);
+	if (cltBaseAccelZ > 10.0 || cltBaseAccelZ < 0.01) cltBaseAccelZ = stf(refBaseShip.InertiaAccelerationZ);
+
+	// сохранить базу (один раз), чтобы не накапливать
+	refRealShip.InertiaAccelerationX_Base = cltBaseAccelX;
+	refRealShip.InertiaAccelerationY_Base = cltBaseAccelY;
+	refRealShip.InertiaAccelerationZ_Base = cltBaseAccelZ;
+
 	refRealShip.InertiaAccelerationX	= cltBaseAccelX * mtp;
 	refRealShip.InertiaAccelerationY	= cltBaseAccelY * mtp;
 	refRealShip.InertiaAccelerationZ	= cltBaseAccelZ * mtp;
-
-	if (iArcadeSails == 0) // момент инерции ниже для тактики
-	{
-		refRealShip.InertiaAccelerationY = float(refRealShip.InertiaAccelerationY) / 2.0;
-	}
 }
 
 // Jason: зелье берсеркера

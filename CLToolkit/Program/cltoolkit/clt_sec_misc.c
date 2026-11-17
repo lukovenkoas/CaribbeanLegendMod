@@ -2,6 +2,8 @@
 // Для каждого флага указано, где его читает базовый код (проверено поиском по Program\);
 // эффекты проверены в игре на этапе 3 (_Mod_Research.md §14.4 п.8).
 // cheats.gundamage и cheats.guncharge ставятся Cheat Menu, но нигде не читаются — не включены.
+// cheats.bladedamage (урон клинком героя x10) убран из списка: его перекрывает общий
+// «Множитель урона» ниже, а два множителя подряд только путали.
 
 // Таблица достижений вшита ниже между маркерами (НЕ отдельным файлом: работающая игра
 // подхватывает только изменение содержимого существующих файлов, новый файл — «can't load file»
@@ -276,10 +278,12 @@ void CLT_Ach_Init()
 
 // --- инструмент ачивок: фильтр по названию + одна кнопка «Выполнить» ---
 string clt_sAchFilter;		// текущий фильтр (ввод в CLT_EDIT, Enter)
-int clt_nAchMatch;			// индекс единственного совпадения (-1 — нет/неоднозначно)
+int clt_nAchMatch;			// индекс единственного НЕполученного совпадения (-1 — нет/неоднозначно)
 bool clt_achInited;			// таблица заполнена
 
-#define CLT_MISC_FLAGS	12
+bool clt_miscClean;			// одноразовая чистка старых меток (cheats.bladedamage)
+
+#define CLT_MISC_FLAGS	12	// флаги 0..11; 11 (атлас) собирается вручную мимо цикла
 
 string CLT_Misc_Flag(int i)
 {
@@ -290,15 +294,14 @@ string CLT_Misc_Flag(int i)
 		case 2: return "Cheats.LocTeleport"; break;		// controls_func.c:890, landinterface.c:1209 — быстрый переход во враждебном городе
 		case 3: return "cheats.dopgrus"; break;			// land_table.c:283 — +1000 к переносимому весу
 		case 4: return "NoNavyPenalty"; break;			// RPG.c:36, helpers.c:39 — нет штрафа за класс корабля
-		case 5: return "cheats.bladedamage"; break;		// melee.c:134 — урон клинком x10 (только у того, на ком флаг: у героя)
-		case 6: return "cheats.energyupdate"; break;	// fightparams\common.c:619 — быстрое восстановление энергии
-		case 7: return "cheats.hpupdate"; break;		// LAi_character.c:1012 — быстрое восстановление HP (герой)
-		case 8: return "cheats.sliding"; break;			// LAi_events.c:213 — блок врага не останавливает удар героя (= «Навигатор» Pierce)
-		case 9: return "Cheats.ImmediateDeath"; break;	// BattleInterface.c:1163
-		case 10: return "CLToolkit.SeaCoordsOff"; break;	// инверт: атрибут есть = показ ВЫКЛ; по умолчанию показ включён.
-		case 11: return "CLToolkit.LeaveBattleKeepFleet"; break;	// выход из боя без бросания компаньонов (если игрок вышел)
-		case 12: return "Navigator.MapTP"; break;		// телепорт по атласу: читает наш interface\mapview.c («Навигатор» 1.9, Nav_CmdTowns)
+		case 5: return "cheats.energyupdate"; break;	// fightparams\common.c:619 — быстрое восстановление энергии
+		case 6: return "cheats.hpupdate"; break;		// LAi_character.c:1012 — быстрое восстановление HP (герой)
+		case 7: return "cheats.sliding"; break;			// LAi_events.c:213 — блок врага не останавливает удар героя (= «Навигатор» Pierce)
+		case 8: return "Cheats.ImmediateDeath"; break;	// BattleInterface.c:1163
+		case 9: return "CLToolkit.SeaCoordsOff"; break;	// инверт: атрибут есть = показ ВЫКЛ; по умолчанию показ включён.
 															// Читает CLT_SeaCoordsUpdate в нашем battle_interface\BattleInterface.c (оверлей)
+		case 10: return "CLToolkit.LeaveBattleKeepFleet"; break;	// выход из боя без бросания компаньонов (если игрок вышел)
+		case 11: return "Navigator.MapTP"; break;		// телепорт по атласу: читает наш interface\mapview.c («Навигатор» 1.9, Nav_CmdTowns)
 	}
 	return "";
 }
@@ -312,14 +315,13 @@ string CLT_Misc_Desc(int i)
 		case 2: return "Быстрые переходы во враждебных городах"; break;
 		case 3: return "+1000 к переносимому весу"; break;
 		case 4: return "Без штрафа за класс корабля"; break;
-		case 5: return "Урон клинком героя x10"; break;
-		case 6: return "Быстрая регенерация энергии"; break;
-		case 7: return "Быстрая регенерация здоровья"; break;
-		case 8: return "Удары героя пробивают любой блок"; break;
-		case 9: return "Мгновенная смерть врагов (море)"; break;
-		case 10: return "Координаты корабля в море"; break;
-		case 11: return "Выход из боя, сохраняя флот"; break;
-		case 12: return "Телепорт по атласу"; break;
+		case 5: return "Быстрая регенерация энергии"; break;
+		case 6: return "Быстрая регенерация здоровья"; break;
+		case 7: return "Удары героя пробивают любой блок"; break;
+		case 8: return "Мгновенная смерть врагов (море)"; break;
+		case 9: return "Координаты корабля в море"; break;
+		case 10: return "Выход из боя, сохраняя флот"; break;
+		case 11: return "Телепорт по атласу"; break;
 	}
 	return "";
 }
@@ -351,15 +353,15 @@ void CLT_Misc_Toggle(int i)
 		CT_UpdateCashTables(pchar);
 		CheckAndSetOverloadMode(pchar);
 	}
-	// Флаг 12 (телепорт по атласу): как «Навигатор» 1.9 (nav_commands.c Nav_CmdTowns) — без карты региона
+	// Флаг 11 (телепорт по атласу): как «Навигатор» 1.9 (nav_commands.c Nav_CmdTowns) — без карты региона
 	// атлас пуст, поэтому при включении выдаём map_best и обновляем атлас
-	if (i == 12 && CheckAttribute(pchar, f) && !CheckCharacterItem(pchar, "map_best"))
+	if (i == 11 && CheckAttribute(pchar, f) && !CheckCharacterItem(pchar, "map_best"))
 	{
 		TakeNItems(pchar, "map_best", 1);
 		RefreshEquippedMaps(pchar);
 	}
-	// Флаг 10 инвертный (SeaCoordsOff): галочка «показывать» = атрибута нет
-	if (i == 10) CLT_Log(CLT_Misc_Desc(i) + ": " + CLT_OnOff(!CheckAttribute(pchar, f)));
+	// Флаг 9 инвертный (SeaCoordsOff): галочка «показывать» = атрибута нет
+	if (i == 9) CLT_Log(CLT_Misc_Desc(i) + ": " + CLT_OnOff(!CheckAttribute(pchar, f)));
 	else CLT_Log(CLT_Misc_Desc(i) + ": " + CLT_OnOff(CheckAttribute(pchar, f)));
 }
 
@@ -455,28 +457,61 @@ void CLT_Misc_PortStockStep(int dir)
 	CLT_Log("Стоянка в порту: не больше " + v[k] + " кораблей");
 }
 
+// Время под водой x10 (по умолчанию x1). Метку pchar.CLToolkit.UWTime читает наш оверлей
+// Loc_ai\LAi_zLoadUtils.c (CreatUnderwater): он задаёт ВСЕ таймеры под водой — Остров Справедливости
+// (500 с без оберега / 750 с «Оберегом Ловца»), храмы (100/150), прочие затонувшие (80/120).
+bool CLT_Misc_UWTimeOn()
+{
+	return CheckAttribute(pchar, "CLToolkit.UWTime") && pchar.CLToolkit.UWTime == "1";
+}
+
+void CLT_Misc_UWTimeToggle()
+{
+	if (CLT_Misc_UWTimeOn()) pchar.CLToolkit.UWTime = "0";
+	else pchar.CLToolkit.UWTime = "1";
+	CLT_Log("Время под водой x10: " + CLT_OnOff(CLT_Misc_UWTimeOn()));
+}
+
 void CLT_Misc_Build()
 {
 	int i;
+	// Одноразовая чистка: поток «Урон клинком героя x10» больше не показываем (его перекрывает
+	// общий множитель урона), но у тех, кто включал его раньше, флаг остался бы в сейве без выключателя.
+	if (!clt_miscClean)
+	{
+		if (CheckAttribute(pchar, "cheats.bladedamage"))
+		{
+			DeleteAttribute(pchar, "cheats.bladedamage");
+			CLT_Log("Убран старый флаг «Урон клинком героя x10»: есть общий множитель урона");
+		}
+		clt_miscClean = true;
+	}
 	CLT_GCol(0, "Море и мир");
 	CLT_GT("flag0", CLT_Misc_Desc(0), CheckAttribute(pchar, CLT_Misc_Flag(0)), true);
-	// Два телепорта рядом: морской (флаг 1) — в пределах текущей морской локации, атлас (флаг 12) — по всему архипелагу
+	// Два телепорта рядом: морской (флаг 1) — в пределах текущей морской локации, атлас (флаг 11) — по всему архипелагу
 	CLT_GT("flag1", CLT_Misc_Desc(1), CheckAttribute(pchar, CLT_Misc_Flag(1)), true);
 	CLT_GH("В море: «Доплыть» в порт, бухту, форт,");
 	CLT_GH("к кораблю — с любой дистанции, и в бою.");
-	CLT_GT("flag12", CLT_Misc_Desc(12), CheckAttribute(pchar, CLT_Misc_Flag(12)), true);
+	CLT_GT("flag11", CLT_Misc_Desc(11), CheckAttribute(pchar, CLT_Misc_Flag(11)), true);
 	CLT_GH("Атлас (M), карта региона: ПКМ по карте —");
 	CLT_GH("список локаций, щелчок — перенос.");
 	for (i = 2; i < 5; i++) CLT_GT("flag" + i, CLT_Misc_Desc(i), CheckAttribute(pchar, CLT_Misc_Flag(i)), true);
 	CLT_GS("mapspd", "Скорость на карте", "x" + CLT_Misc_MapSpd(), true);
 	CLT_GH("Свой корабль на глобальной карте: 1, 2, 3.");
 	CLT_GCol(1, "");	// заголовок не рисуем: сверху в этой зоне поле фильтра ачивок (CLT_EDIT)
+	// Флаг 11 (телепорт по атласу) в цикле пропускаем — он добавлен вручную в колонку 0
 	for (i = 5; i < CLT_MISC_FLAGS; i++)
 	{
-		bool st = CheckAttribute(pchar, CLT_Misc_Flag(i));
-		if (i == 10) st = !st;	// CL Toolkit: флаг 10 инвертный (SeaCoordsOff) — галочка = «показывать»
-		CLT_GT("flag" + i, CLT_Misc_Desc(i), st, true);
+		if (i != 11)
+		{
+			bool st = CheckAttribute(pchar, CLT_Misc_Flag(i));
+			if (i == 9) st = !st;	// CL Toolkit: флаг 9 инвертный (SeaCoordsOff) — галочка = «показывать»
+			CLT_GT("flag" + i, CLT_Misc_Desc(i), st, true);
+		}
 	}
+	CLT_GT("uwtime", "Время под водой x10", CLT_Misc_UWTimeOn(), true);
+	CLT_GH("Остров Справедливости, храмы, затонувшие");
+	CLT_GH("корабли: таймеры 500/750, 100/150, 80/120 с.");
 	CLT_GS("dmg", "Множитель урона", "x" + int(CLT_Misc_Dmg()), true);
 	CLT_GH("Клинок и огнестрел героя: 1, 2, 3, 5, 10, 100.");
 	CLT_GS("portstock", "Стоянка в порту", "до " + CLT_Misc_PortStock(), true);
@@ -519,13 +554,15 @@ string CLT_StrLower(string s)
 }
 
 // Строки инструмента ачивок (рисуются в текущей колонке — 2).
-// Совпадений 0 или больше 1 -> кнопка выключена; ровно 1 -> «ВЫПОЛНИТЬ: имя».
+// Для кнопки считаются только НЕполученные совпадения: полученные фильтру не мешают
+// (пример: «powergamer ii» — подстрока «powergamer iii», но если III получена, II единственная).
+// Невыполненных 0 или больше 1 -> кнопка выключена; ровно 1 -> «ВЫПОЛНИТЬ: имя».
 void CLT_Ach_Build()
 {
 	string q = CLT_StrLower(clt_sAchFilter);
-	string st;
-	int n = 0;
-	int first = -1;
+	int n = 0;		// всего совпадений
+	int todo = 0;	// из них неполученных
+	int first = -1;	// первое неполученное совпадение
 	int i;
 	int shown;
 	if (q != "")
@@ -534,8 +571,12 @@ void CLT_Ach_Build()
 		{
 			if (findsubstr(clt_achKey[i], q, 0) >= 0)
 			{
-				if (n == 0) first = i;
 				n++;
+				if (!GetAchievement(clt_achApi[i]))
+				{
+					if (todo == 0) first = i;
+					todo++;
+				}
 			}
 		}
 	}
@@ -553,21 +594,31 @@ void CLT_Ach_Build()
 		CLT_GA("achdo", "Выполнить", false);
 		return;
 	}
-	if (n == 1) CLT_GH("Найдено 1:");
-	else CLT_GH("Найдено: " + n + " — уточните фильтр:");
+	if (todo == 0) CLT_GH("Найдено: " + n + " — все уже получены:");
+	if (todo == 1 && n == 1) CLT_GH("Найдено 1:");
+	if (todo == 1 && n > 1) CLT_GH("Найдено: " + n + ", невыполнено 1:");
+	if (todo > 1) CLT_GH("Найдено: " + n + ", невыполнено: " + todo + " — уточните фильтр:");
+	// список: сначала невыполненные, затем полученные (до 3 строк)
 	shown = 0;
 	for (i = 0; i < clt_achCount && shown < 3; i++)
 	{
-		if (findsubstr(clt_achKey[i], q, 0) >= 0)
+		if (findsubstr(clt_achKey[i], q, 0) >= 0 && !GetAchievement(clt_achApi[i]))
 		{
-			st = "";
-			if (GetAchievement(clt_achApi[i])) st = " — получено";
-			CLT_GH("• " + clt_achName[i] + st);
+			CLT_GH("• " + clt_achName[i]);
 			shown++;
 		}
 	}
-	if (n == 1) CLT_GA("achdo", "ВЫПОЛНИТЬ: " + clt_achName[first], !GetAchievement(clt_achApi[first]));
-	else CLT_GA("achdo", "Выполнить (нужно одно совпадение)", false);
+	for (i = 0; i < clt_achCount && shown < 3; i++)
+	{
+		if (findsubstr(clt_achKey[i], q, 0) >= 0 && GetAchievement(clt_achApi[i]))
+		{
+			CLT_GH("• " + clt_achName[i] + " — получено");
+			shown++;
+		}
+	}
+	if (todo == 1) CLT_GA("achdo", "ВЫПОЛНИТЬ: " + clt_achName[first], true);
+	if (todo == 0) CLT_GA("achdo", "Выполнить (все получены)", false);
+	if (todo > 1) CLT_GA("achdo", "Выполнить (нужно одно невыполненное)", false);
 }
 
 // Выполнить найденную ачивку: Achievment_Set(API) + синхронизация связанного стата (если есть).
@@ -606,6 +657,7 @@ void CLT_Misc_Do(string cmd, int dir, bool big)
 	if (cmd == "dmg") { CLT_Misc_DmgStep(dir); return; }
 	if (cmd == "mapspd") { CLT_Misc_MapSpdStep(dir); return; }
 	if (cmd == "portstock") { CLT_Misc_PortStockStep(dir); return; }
+	if (cmd == "uwtime") { CLT_Misc_UWTimeToggle(); return; }
 	if (cmd == "achdo") { CLT_Ach_Do(); return; }
 	if (strlen(cmd) < 5 || strcut(cmd, 0, 3) != "flag") return;
 	CLT_Misc_Toggle(sti(strcut(cmd, 4, strlen(cmd) - 1)));

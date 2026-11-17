@@ -7,7 +7,6 @@
 // даты, что в AddDataToCurrent, но без события NextDay (суточный пересчёт назад не нужен).
 // Часы — SetCurrentTime (calendar.c, так время ставят квесты), только в пределах текущего дня.
 // Случайные встречи — bEncOffGlobal (blackmark_cheat.c F27).
-// Поиск особых флотов — clt_sec_fleet.c (своя функция по просьбе пользователя).
 
 void CLT_World_ToggleEnc()
 {

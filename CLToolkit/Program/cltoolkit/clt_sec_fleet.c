@@ -15,8 +15,9 @@
 // Вне глобальной карты позиции те, что были при последнем выходе с неё (игра их не двигает).
 
 #define CLT_FLEET_MAX		20
-#define CLT_FLEET_ROWS		9	// строк списка на странице «Мир»
+#define CLT_FLEET_ROWS		8	// строк списка на странице «Мир» (иначе не хватает строк колонки)
 #define CLT_FLEET_GOLD		"Head_of_Gold_Squadron"
+#define CLT_FLEET_GROUPS	350	// размер AIGroups (MAX_SHIP_GROUPS в sea_ai\AIGroup.c)
 // картинка карты на странице (пропорции MAIN_MAP атласа 1330x900)
 #define CLT_FM_L			80
 #define CLT_FM_T			150
@@ -31,6 +32,7 @@ bool clt_fPos[CLT_FLEET_MAX];
 bool clt_fGold[CLT_FLEET_MAX];
 int clt_fNat[CLT_FLEET_MAX];
 string clt_fChr[CLT_FLEET_MAX];
+string clt_fPort[CLT_FLEET_MAX];	// колония, в порту которой стоит флот ("" — не в порту)
 int clt_nFleets;
 float clt_fMeX;
 float clt_fMeZ;
@@ -139,7 +141,7 @@ string CLT_Fleet_NationName(int n)
 	return "";
 }
 
-void CLT_Fleet_Add(string chrID, bool bPos, float x, float z, string dest)
+void CLT_Fleet_Add(string chrID, bool bPos, float x, float z, string dest, string port)
 {
 	int i;
 	if (clt_nFleets >= CLT_FLEET_MAX) return;
@@ -162,6 +164,7 @@ void CLT_Fleet_Add(string chrID, bool bPos, float x, float z, string dest)
 	clt_fChr[i] = chrID;
 	clt_fName[i] = s;
 	clt_fDest[i] = dest;
+	clt_fPort[i] = port;
 	clt_fX[i] = x;
 	clt_fZ[i] = z;
 	clt_fPos[i] = bPos;
@@ -173,6 +176,7 @@ void CLT_Fleet_Add(string chrID, bool bPos, float x, float z, string dest)
 		clt_fChr[i] = clt_fChr[0];	clt_fChr[0] = chrID;
 		clt_fName[i] = clt_fName[0];	clt_fName[0] = s;
 		clt_fDest[i] = clt_fDest[0];	clt_fDest[0] = dest;
+		clt_fPort[i] = clt_fPort[0];	clt_fPort[0] = port;
 		clt_fX[i] = clt_fX[0];		clt_fX[0] = x;
 		clt_fZ[i] = clt_fZ[0];		clt_fZ[0] = z;
 		clt_fPos[i] = clt_fPos[0];	clt_fPos[0] = bPos;
@@ -181,11 +185,52 @@ void CLT_Fleet_Add(string chrID, bool bPos, float x, float z, string dest)
 	}
 }
 
+// Порт, в котором стоит флот. Адрес группы (AIGroups[].Location) — ареал/остров, где игра выставит
+// корабли у локаторов quest_ship_N; название берём у главной колонии острова (islands_init.c main_colony).
+// Запасной вариант — город, в котором сейчас стоит командир ("BasTer_town").
+string CLT_Fleet_Port(string isl, string chrID)
+{
+	if (isl == "" || isl == "none") return "";	// адреса нет (Group_SetAddressNone) — точно не в порту
+	string city = GetCityNameByIsland(isl);
+	if (city != "none" && FindColony(city) != -1) return XI_ConvertString("Colony" + city);
+	int idx = GetCharacterIndex(chrID);
+	if (idx < 0) return "";
+	ref chr = &Characters[idx];
+	string loc = "";
+	if (CheckAttribute(chr, "location")) loc = chr.location;
+	if (strlen(loc) <= 5) return "";
+	if (strcut(loc, strlen(loc) - 5, strlen(loc) - 1) != "_town") return "";
+	city = strcut(loc, 0, strlen(loc) - 6);
+	if (city == "" || FindColony(city) == -1) return "";
+	return XI_ConvertString("Colony" + city);
+}
+
+// Командир группы: штатный MainCharacter, иначе первый живой персонаж этой группы
+string CLT_Fleet_GrpChief(string grpID)
+{
+	if (grpID == "") return "";
+	int gi = Group_FindGroup(grpID);
+	if (gi >= 0 && CheckAttribute(&AIGroups[gi], "MainCharacter") && AIGroups[gi].MainCharacter != "") return AIGroups[gi].MainCharacter;
+	string res = "";
+	int i;
+	for (i = 0; i < MAX_CHARACTERS; i++)
+	{
+		if (!CheckAttribute(&Characters[i], "id")) continue;
+		if (!CheckAttribute(&Characters[i], "SeaAI.Group.Name")) continue;
+		if (Characters[i].SeaAI.Group.Name != grpID) continue;
+		if (CharacterIsDead(&Characters[i])) continue;
+		if (CheckAttribute(&Characters[i], "mapEnc.Name")) return Characters[i].id;
+		if (res == "") res = Characters[i].id;
+	}
+	return res;
+}
+
 void CLT_Fleet_Collect()
 {
 	int i, n;
 	aref encs, enc;
 	string dest;
+	string gid, cid, port;
 	clt_nFleets = 0;
 	CLT_Fleet_PlayerPos();
 	if (CheckAttribute(&worldMap, "encounters"))
@@ -198,7 +243,7 @@ void CLT_Fleet_Collect()
 			if (!CheckAttribute(enc, "quest.chrID")) continue;
 			if (CheckAttribute(enc, "needDelete")) continue;
 			if (!CheckAttribute(enc, "x") || !CheckAttribute(enc, "z")) continue;
-			CLT_Fleet_Add(enc.quest.chrID, true, float(enc.x), float(enc.z), "");
+			CLT_Fleet_Add(enc.quest.chrID, true, float(enc.x), float(enc.z), "", "");
 		}
 	}
 	if (CheckAttribute(&worldMap, "addQuestEncounters"))
@@ -212,8 +257,23 @@ void CLT_Fleet_Collect()
 			dest = "";
 			if (CheckAttribute(enc, "XZGoto") && CheckAttribute(enc, "x2") && CheckAttribute(enc, "z2"))
 				dest = CLT_Fleet_Near(float(enc.x2), float(enc.z2));
-			CLT_Fleet_Add(enc.characterID, false, 0.0, 0.0, dest);
+			CLT_Fleet_Add(enc.characterID, false, 0.0, 0.0, dest, "");
 		}
+	}
+	// Флоты, которых нет на глобальной карте, потому что они стоят в порту: группа SeaAI адресована
+	// на остров с группой "quest_ships" (так игра держит квестовые эскадры на якоре — GenQuests.c,
+	// Saga.c, Siege.c, GoldFleet.c; регистр в базе разный: Quest_ships / quest_ships, сравнение нечувствительно).
+	for (i = 0; i < CLT_FLEET_GROUPS; i++)
+	{
+		if (!CheckAttribute(&AIGroups[i], "id")) continue;
+		if (!CheckAttribute(&AIGroups[i], "Location.group")) continue;
+		if (AIGroups[i].Location.group != "quest_ships") continue;
+		gid = AIGroups[i].id;
+		cid = CLT_Fleet_GrpChief(gid);
+		if (cid == "") continue;
+		port = CLT_Fleet_Port(AIGroups[i].Location, cid);
+		if (port == "") continue;
+		CLT_Fleet_Add(cid, false, 0.0, 0.0, "", port);
 	}
 }
 
@@ -245,6 +305,12 @@ string CLT_Fleet_Line(int i, int nameLen)
 		if (sNear != "") s = s + ", у " + sNear;
 		return s;
 	}
+	if (clt_fPort[i] != "")
+	{
+		s = s + clt_fPort[i] + " (в порту)";
+		if (clt_fDest[i] != "") s = s + ", затем к " + clt_fDest[i];
+		return s;
+	}
 	s = s + "ещё не на карте";
 	if (clt_fDest[i] != "") s = s + ", идёт к " + clt_fDest[i];
 	return s;
@@ -264,8 +330,9 @@ void CLT_Fleet_WorldRows()
 	CLT_GA("fleetmap", "Схема: особые флоты на карте", true);
 	if (clt_nFleets == 0) CLT_GH("Особых флотов сейчас нет.");
 	for (i = 0; i < clt_nFleets && i < CLT_FLEET_ROWS; i++) CLT_GH(CLT_Fleet_Line(i, 40));
-	if (clt_nFleets > CLT_FLEET_ROWS) CLT_GH("...ещё " + (clt_nFleets - CLT_FLEET_ROWS) + " — на схеме.");
-	CLT_GH("Курс и расстояние — от героя.");
+	if (clt_nFleets > CLT_FLEET_ROWS) CLT_GH("...ещё " + (clt_nFleets - CLT_FLEET_ROWS) + " — полный список на схеме.");
+	CLT_GH("Курс и расстояние — от героя;");
+	CLT_GH("«в порту» — флот на стоянке, не на карте.");
 }
 
 // ---------------------------------------------------------------------------
@@ -357,6 +424,7 @@ void CLT_Fleet_MapRefresh()
 	s = s + NewStr() + "Голубой корабль — вы." + NewStr();
 	s = s + "Золотая печать — золотой флот," + NewStr() + "лиловая — прочие квестовые." + NewStr();
 	s = s + "Флаг под меткой — нация флота." + NewStr();
+	s = s + "«В порту» — стоит в порту, не на карте." + NewStr();
 	s = s + "Ещё не на карте — появится" + NewStr() + "при входе на глобальную карту.";
 	SetFormatedText("CLTM_LIST", s);
 }

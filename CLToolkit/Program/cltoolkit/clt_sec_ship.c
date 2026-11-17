@@ -287,7 +287,14 @@ void CLT_Ship_SetCannon(ref chr, ref rShip, int t)
 
 string CLT_Ship_StatText(ref rShip, ref rBase, string attr)
 {
-	string cur = CLT_AttrStr(rShip, attr, "", "?");
+	// для инерции разгона показываем сохранённую базу (пользовательскую), а не применённое
+	// в море значение (с перками) — так правки не «теряются» и не накапливаются.
+	string readAttr = attr;
+	if (attr == "InertiaAccelerationX" || attr == "InertiaAccelerationY" || attr == "InertiaAccelerationZ")
+	{
+		if (CheckAttribute(rShip, attr + "_Base")) readAttr = attr + "_Base";
+	}
+	string cur = CLT_AttrStr(rShip, readAttr, "", "?");
 	string sDef = CLT_AttrStr(rBase, attr, "", "?");
 	if (attr == "SpeedRate" || attr == "TurnRate" || attr == "SpeedDependWeight" || attr == "TurnDependWeight" || attr == "InertiaAccelerationY" || attr == "InertiaBrakingY" || attr == "InertiaBrakingZ" || attr == "InertiaAccelerationZ")
 	{
@@ -320,6 +327,16 @@ void CLT_Ship_Picture(ref chr)
 	SetNewPicture("CLTP_SHIPPIC", pic);
 }
 
+bool CLT_Ship_IsNationLine(ref rBase)
+{
+	return CheckAttribute(rBase, "NationalLineShip") && sti(rBase.NationalLineShip) == 1 && CheckAttribute(rBase, "NationExclusive");
+}
+
+bool CLT_Ship_IgnoreNation(ref chr)
+{
+	return CheckAttribute(chr, "CLToolkit.IgnoreNationCheck") && chr.CLToolkit.IgnoreNationCheck == "1";
+}
+
 void CLT_Ship_Build()
 {
 	ref chr = CLT_Target();
@@ -338,6 +355,10 @@ void CLT_Ship_Build()
 	int base = sti(rShip.BaseType);
 	ref rBase;
 	makeref(rBase, ShipsTypes[base]); // как GetCharacterShipMaxHP (characterUtilite.c)
+	// CL Toolkit: автосброс аномальных инерций разгона (накопление от старого бага)
+	if (CheckAttribute(rShip, "InertiaAccelerationX") && stf(rShip.InertiaAccelerationX) > 10.0) { rShip.InertiaAccelerationX = rBase.InertiaAccelerationX; rShip.InertiaAccelerationX_Base = rBase.InertiaAccelerationX; }
+	if (CheckAttribute(rShip, "InertiaAccelerationY") && stf(rShip.InertiaAccelerationY) > 10.0) { rShip.InertiaAccelerationY = rBase.InertiaAccelerationY; rShip.InertiaAccelerationY_Base = rBase.InertiaAccelerationY; }
+	if (CheckAttribute(rShip, "InertiaAccelerationZ") && stf(rShip.InertiaAccelerationZ) > 10.0) { rShip.InertiaAccelerationZ = rBase.InertiaAccelerationZ; rShip.InertiaAccelerationZ_Base = rBase.InertiaAccelerationZ; }
 	bool bHero = CLT_TargetIsHero();
 
 	// левая колонка: строки 0-7 под картинкой корабля
@@ -383,6 +404,15 @@ void CLT_Ship_Build()
 	CLT_GA("cannonculv", "Кулеврины под калибр", true);
 	CLT_GA("cannon48", "Фортовые 48-фунтовые", true);
 	CLT_GA("cannonfix", "Штатный калибр и подходящие пушки", true);
+	bool bLine = CLT_Ship_IsNationLine(rBase);
+	bool bIgnore = CLT_Ship_IgnoreNation(chr);
+	CLT_GT("nationrecog", "Не узнавать как линкор нации", bIgnore, bLine);
+	if (bLine)
+	{
+		if (bIgnore) CLT_GH("Линкор " + NationNamePeople(sti(rBase.NationExclusive)) + ": метка снята — форт/патруль не узнают");
+		else CLT_GH("Линкор " + NationNamePeople(sti(rBase.NationExclusive)) + ": форт/патруль узнают под чужим флагом");
+	}
+	else CLT_GH("Не линейный корабль нации — проверка не применяется");
 	CLT_Mod_Build(chr, rShip);
 }
 
@@ -391,10 +421,19 @@ void CLT_Ship_Tune(ref chr, ref rShip, ref rBase, string attr, float d)
 	float fMin = 1.0;
 	if (attr == "SpeedDependWeight" || attr == "TurnDependWeight") fMin = 0.01;
 	if (attr == "InertiaAccelerationY" || attr == "InertiaBrakingY" || attr == "InertiaBrakingZ" || attr == "InertiaAccelerationZ" || attr == "InertiaAccelerationX" || attr == "InertiaBrakingX") fMin = 0.1;
-	float f = stf(rShip.(attr)) + d;
+	string readAttr = attr;
+	if (attr == "InertiaAccelerationX" || attr == "InertiaAccelerationY" || attr == "InertiaAccelerationZ")
+	{
+		if (CheckAttribute(rShip, attr + "_Base")) readAttr = attr + "_Base";
+	}
+	float f = stf(rShip.(readAttr)) + d;
 	if (f < fMin) f = fMin;
 	if (attr == "HP" || attr == "Capacity") rShip.(attr) = int(f);
 	else rShip.(attr) = f;
+	if (attr == "InertiaAccelerationX" || attr == "InertiaAccelerationY" || attr == "InertiaAccelerationZ")
+	{
+		rShip.(attr + "_Base") = f;
+	}
 	// корпус пересчитываем, иначе текущее HP останется от старого максимума («Навигатор» 1.9)
 	if (attr == "HP") chr.ship.hp = GetCharacterShipHP(chr);
 	CLT_Log(GetFullName(chr) + ": " + attr + " = " + rShip.(attr));
@@ -460,10 +499,14 @@ void CLT_Ship_Do(string cmd, int dir, bool big)
 			rShip.TurnRate = rBase.TurnRate;
 			rShip.SpeedDependWeight = rBase.SpeedDependWeight;
 			rShip.TurnDependWeight = rBase.TurnDependWeight;
+			rShip.InertiaAccelerationX = rBase.InertiaAccelerationX;
+			rShip.InertiaAccelerationX_Base = rBase.InertiaAccelerationX;
 			rShip.InertiaAccelerationY = rBase.InertiaAccelerationY;
+			rShip.InertiaAccelerationY_Base = rBase.InertiaAccelerationY;
 			rShip.InertiaBrakingY = rBase.InertiaBrakingY;
 			rShip.InertiaBrakingZ = rBase.InertiaBrakingZ;
 			rShip.InertiaAccelerationZ = rBase.InertiaAccelerationZ;
+			rShip.InertiaAccelerationZ_Base = rBase.InertiaAccelerationZ;
 			chr.ship.hp = GetCharacterShipHP(chr);
 			CLT_Log(GetFullName(chr) + ": характеристики как у шаблона");
 			return;
@@ -532,6 +575,19 @@ void CLT_Ship_Do(string cmd, int dir, bool big)
 			rShip.Cannon = t;
 			chr.Ship.Cannons.Type = t;
 			CLT_Log(GetFullName(chr) + ": калибр " + cal + ", " + CLT_Ship_CannonName(t));
+			return;
+		break;
+		case "nationrecog":
+			if (CLT_Ship_IgnoreNation(chr))
+			{
+				DeleteAttribute(chr, "CLToolkit.IgnoreNationCheck");
+				CLT_Log(GetFullName(chr) + ": распознавание нации включено");
+			}
+			else
+			{
+				chr.CLToolkit.IgnoreNationCheck = "1";
+				CLT_Log(GetFullName(chr) + ": распознавание нации выключено");
+			}
 			return;
 		break;
 		case "noreload": CLT_Hero_Toggle(5); return; break;
