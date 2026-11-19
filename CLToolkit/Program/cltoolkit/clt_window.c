@@ -32,8 +32,8 @@
 #define CLT_SEC_CARGO		5
 #define CLT_SEC_MODES		6
 #define CLT_SEC_WORLD		7
-#define CLT_SEC_INSP		8
-#define CLT_SEC_FLEETMAP	9	// не плитка: схема особых флотов, открывается из «Мира»
+#define CLT_SEC_TRACK		8
+#define CLT_SEC_FLEETMAP	9	// не плитка: схема особых флотов, открывается из «Трекера»
 
 bool clt_bClosing;
 int clt_nSec;					// 0 — хаб, иначе открытый раздел
@@ -63,7 +63,7 @@ int clt_nGCur;
 #include "cltoolkit\clt_sec_items.c"
 #include "cltoolkit\clt_sec_fleet.c"
 #include "cltoolkit\clt_sec_world.c"
-#include "cltoolkit\clt_sec_insp.c"
+#include "cltoolkit\clt_sec_track.c"
 #include "cltoolkit\clt_sec_misc.c"
 #include "cltoolkit\clt_sec_hero.c"
 #include "cltoolkit\clt_sec_cargo.c"
@@ -92,7 +92,7 @@ void CLT_Window_Init(string iniName)
 
 	CLT_BuildTargets();
 	CLT_Items_Reset();
-	CLT_Insp_Reset();
+	CLT_Trk_Reset();
 	CLT_Cargo_Reset();
 
 	GameInterface.clt_qty.str = "" + clt_nQty;
@@ -334,7 +334,7 @@ string CLT_TileName(int i)
 		case CLT_SEC_CARGO:		return "Трюм"; break;
 		case CLT_SEC_MODES:		return "Режимы"; break;
 		case CLT_SEC_WORLD:		return "Мир"; break;
-		case CLT_SEC_INSP:		return "Инспектор"; break;
+		case CLT_SEC_TRACK:		return "Трекер"; break;
 		case CLT_SEC_FLEETMAP:	return "Особые флоты"; break;
 	}
 	return "";
@@ -351,8 +351,8 @@ string CLT_TileSub(int i)
 		case CLT_SEC_CARGO:		return "товары в трюме: добавить и убрать"; break;
 		case CLT_SEC_MODES:		return "флаги штатного Cheat Menu"; break;
 		case CLT_SEC_WORLD:		return "нации, где мы, случайные встречи"; break;
-		case CLT_SEC_INSP:		return "дерево атрибутов (чтение)"; break;
-		case CLT_SEC_FLEETMAP:	return "схема архипелага: квестовые флоты и ваш корабль; Назад — в Мир"; break;
+		case CLT_SEC_TRACK:		return "таймеры квестов, триггеры мест, запреты, особые флоты"; break;
+		case CLT_SEC_FLEETMAP:	return "схема архипелага: квестовые флоты и ваш корабль; Назад — в Трекер"; break;
 	}
 	return "";
 }
@@ -368,7 +368,7 @@ string CLT_TileIcon(int i)
 		case CLT_SEC_CARGO:		s = "anchor"; break;
 		case CLT_SEC_MODES:		s = "gear"; break;
 		case CLT_SEC_WORLD:		s = "glass"; break;
-		case CLT_SEC_INSP:		s = "compass"; break;
+		case CLT_SEC_TRACK:		s = "compass"; break;
 	}
 	return CLT_TEX + "i_" + s + ".tga";
 }
@@ -720,11 +720,11 @@ void CLT_PageRender()
 		case CLT_SEC_CARGO:		CLT_Cargo_Refresh(); break;
 		case CLT_SEC_MODES:		CLT_Misc_Build(); break;
 		case CLT_SEC_WORLD:		CLT_World_Build(); break;
-		case CLT_SEC_INSP:		CLT_Insp_Build(); break;
+		case CLT_SEC_TRACK:		CLT_Trk_Build(); break;
 		case CLT_SEC_FLEETMAP:	CLT_Fleet_MapRefresh(); break;
 	}
 	CLT_GShow();
-	if (clt_nSec == CLT_SEC_FLEETMAP) CLT_BtnText("CLTP_BACK", "< В раздел Мир");
+	if (clt_nSec == CLT_SEC_FLEETMAP) CLT_BtnText("CLTP_BACK", "< В раздел Трекер");
 	else CLT_BtnText("CLTP_BACK", "< К разделам");
 	SetFormatedText("CLTP_TITLE", CLT_TileName(clt_nSec) + ":  " + GetFullName(chr));
 	SetFormatedText("CLTP_SUB", CLT_TileSub(clt_nSec) + "    |    " + CLT_TargetRole(CLT_TargetIndex()) + " " + (clt_nTargetPos + 1) + " / " + clt_nTargets);
@@ -778,7 +778,7 @@ void CLT_SecDo(string cmd, int dir, bool big)
 		case CLT_SEC_SHIP:		CLT_Ship_Do(cmd, dir, big); break;
 		case CLT_SEC_MODES:		CLT_Misc_Do(cmd, dir, big); break;
 		case CLT_SEC_WORLD:		CLT_World_Do(cmd, dir, big); break;
-		case CLT_SEC_INSP:		CLT_Insp_Do(cmd, dir, big); break;
+		case CLT_SEC_TRACK:		CLT_Trk_Do(cmd, dir, big); break;
 	}
 }
 
@@ -795,7 +795,7 @@ void CLT_Window_OnCommand()
 	{
 		if (nodName == "CLTP_BACK")
 		{
-			if (clt_nSec == CLT_SEC_FLEETMAP) CLT_ShowSec(CLT_SEC_WORLD);
+			if (clt_nSec == CLT_SEC_FLEETMAP) CLT_ShowSec(CLT_SEC_TRACK);
 			else CLT_ShowSec(0);
 			return;
 		}
@@ -860,7 +860,6 @@ void CLT_Window_OnCommand()
 void CLT_SecTargetChanged()
 {
 	clt_sOut = "";
-	if (clt_nSec == CLT_SEC_INSP) CLT_Insp_Reset();
 }
 
 void CLT_SetQty(int q)
@@ -948,7 +947,7 @@ void CLT_Window_OnCancel()
 {
 	if (clt_nSec == CLT_SEC_FLEETMAP)
 	{
-		CLT_ShowSec(CLT_SEC_WORLD);
+		CLT_ShowSec(CLT_SEC_TRACK);
 		return;
 	}
 	if (clt_nSec != 0)

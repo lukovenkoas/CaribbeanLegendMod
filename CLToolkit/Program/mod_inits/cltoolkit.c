@@ -105,12 +105,19 @@ void CLT_FrameAfterClose()
 // а ссылку «забрать корабль» рисует при Portman > 0. Та же схема у Workshop-модов стоянки
 // («Extended Mooring» 3535021577 — порог 6, вариант 3535061146 — 10). Поэтому счётчик
 // держим в «понятном диалогу» диапазоне 0..2 и перед каждым диалогом пересчитываем его
-// из фактического числа кораблей на стоянке у этого портмана:
+// из фактического числа кораблей на стоянке у этого хранителя:
 //   меньше лимита   -> 0/1/2 (места есть, ссылка «забрать» видна),
 //   лимит достигнут -> 99    (срабатывает любой порог: 3, 6, 10 — штатная реплика «нет мест»).
 // Лимит — pchar.CLToolkit.PortStock (страница «Режимы»), по умолчанию атрибута нет =
 // «авто»: не вмешиваемся, работает штатный порог базы или установленного мода стоянки.
 // Диалоги при этом не копируются (12 языков), правка одна и не зависит от языка.
+// Исла Мона (Islamona_carpenter, Program\dialogs\...\Quest\Roger.c): своя логика с жёсткими
+// проверками (2 места до порта; после постройки порта — 3 малых или 1 большой 1-го класса,
+// Harbour == "done", флаг FstClassInHarbour). Обрабатываем только после постройки порта:
+// тот же трюк со счётчиком снимает порог «3» для малых кораблей, правило «1 большой /
+// нельзя большой при наличии других» сохраняет сам диалог (проверки FstClassInHarbour
+// и portman > 0). До постройки порта не вмешиваемся. Визуально в бухте мест мало —
+// лишние сохранённые корабли могут не отображаться, но остаются на стоянке (данные).
 #event_handler("evntDialogStart", "CLT_PortmanSync");
 
 void CLT_PortmanSync()
@@ -118,10 +125,19 @@ void CLT_PortmanSync()
 	if (!CheckAttribute(pchar, "CLToolkit.PortStock")) return;	// «авто» — не вмешиваемся
 	ref chr;
 	makeref(chr, CharacterRef);				// диалог уже начался: CharacterRef = собеседник
-	if (!CheckAttribute(chr, "Portman")) return;		// не портман
-	// Только городские портманы (<City>_PortMan). У базы Исла Моны (Islamona_carpenter)
-	// тот же атрибут portman, но своя логика на 2/3 места — её не трогаем.
-	if (!HasSubStr(chr.id, "_PortMan")) return;
+	bool bIslaMona = (chr.id == "Islamona_carpenter");
+	if (!bIslaMona)
+	{
+		if (!CheckAttribute(chr, "Portman")) return;		// не портман
+		// Только городские портманы (<City>_PortMan).
+		if (!HasSubStr(chr.id, "_PortMan")) return;
+	}
+	else
+	{
+		// До постройки порта — штатные 2 места / запрет 1-го класса, не трогаем.
+		if (!CheckAttribute(pchar, "questTemp.IslaMona.Harbour")) return;
+		if (pchar.questTemp.IslaMona.Harbour != "done") return;
+	}
 
 	int lim = int(pchar.CLToolkit.PortStock);
 	if (lim < 3) lim = 3;

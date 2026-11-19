@@ -30,8 +30,8 @@ window is open. Interface language: Russian.
 | Ship: **class (rank)** for quest requirements, stats, hidden handling coefficients, crew, cannons, repair, specialization, trait, line-ship recognition opt-out | Корабль: **класс (ранг)** под требования квестов, характеристики, скрытые коэффициенты управления, команда, орудия, ремонт, специализация, свойство, снятие узнаваемости нации |
 | Cargo: all 50 goods | Трюм: все 50 товаров |
 | Modes: game cheat flags, damage multiplier, world-map speed, sea teleport ("Sail To" from any distance), atlas teleport (atlas M → right-click), port storage limit, leave battle keeping the fleet, Steam achievement unlock, underwater time x10 | Режимы: штатные чит-флаги, множитель урона, скорость на карте, морской телепорт («Доплыть» с любой дистанции), телепорт по атласу (атлас M → ПКМ), лимит стоянки в порту, выход из боя с флотом, открытие достижения Steam, время под водой ×10 |
-| World: relations, location, date/time, encounters, special fleets finder on map and in ports | Мир: отношения, где мы, дата/время, встречи, поиск особых флотов на карте и в порту |
-| Inspector: read-only attribute tree | Инспектор: дерево атрибутов (чтение) |
+| World: relations, location, date/time, encounters | Мир: отношения, где мы, дата/время, встречи |
+| Tracker: pending quest timers (date, quest, event), hidden location triggers and locks (closed doors, islands, map exit), special fleets finder on map and in ports | Трекер: ожидающие таймеры квестов (дата, квест, событие), скрытые триггеры мест и запреты (закрытые двери, острова, выход на карту), поиск особых флотов на карте и в порту |
 | Squadron up to 8 ships | Эскадра до 8 кораблей |
 
 ## Changes since the initial release / Что нового с первой версии (2026-11-11)

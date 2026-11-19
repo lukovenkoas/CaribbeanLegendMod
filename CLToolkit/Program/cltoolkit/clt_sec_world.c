@@ -123,8 +123,7 @@ void CLT_World_Build()
 
 	CLT_GCol(2, "Мир");
 	CLT_GT("enc", "Без случайных встреч", bEncOffGlobal, true);
-	CLT_GSkip();
-	CLT_Fleet_WorldRows();
+	CLT_GH("Особые флоты — в разделе «Трекер».");
 }
 
 void CLT_World_Do(string cmd, int dir, bool big)
@@ -133,8 +132,6 @@ void CLT_World_Do(string cmd, int dir, bool big)
 	switch (cmd)
 	{
 		case "enc": CLT_World_ToggleEnc(); return; break;
-		case "fleets": CLT_Fleet_Toggle(); return; break;
-		case "fleetmap": CLT_ShowSec(CLT_SEC_FLEETMAP); return; break;
 		case "natall+":
 			for (j = 0; j < MAX_NATIONS; j++) ChangeCharacterNationReputation(pchar, j, 10); // blackmark_cheat.c F13
 			CLT_Log("Все нации +10");
